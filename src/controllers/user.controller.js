@@ -63,12 +63,7 @@ export const createUser = async (req, res) => {
       });
     }
 
-    await inngest.send({
-      name: "user/signup",
-      data: {
-        email: createdUser.email,
-      },
-    });
+    
 
     return res
       .status(200)

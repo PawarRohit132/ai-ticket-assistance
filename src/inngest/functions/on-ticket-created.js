@@ -108,6 +108,7 @@ export const onTicketCreated = inngest.createFunction(
         },
       );
 
+     
 
       return { success: true };
     } catch (err) {
