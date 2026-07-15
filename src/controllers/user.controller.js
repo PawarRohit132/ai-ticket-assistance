@@ -63,8 +63,6 @@ export const createUser = async (req, res) => {
       });
     }
 
-    
-
     return res
       .status(200)
       .json(new ApiResponse(200, createdUser, "User registered successfully"));
@@ -219,16 +217,15 @@ export const getAllUsers = async (req, res) => {
   try {
     const user = req.user;
     console.log(user);
-    
-    if (user.role !== 'admin') {
+
+    if (user.role !== "admin") {
       return res.status(404).json({
         success: false,
         message: "user not found",
       });
-
     }
-    const allUsers = await User.find({})
-    
+    const allUsers = await User.find({});
+
     return res
       .status(200)
       .json(new ApiResponse(200, allUsers, "All users fetched"));
@@ -287,7 +284,7 @@ export const refreshAccessToken = async (req, res) => {
     const options = {
       httpOnly: true,
       secure: true,
-      sameSite: "none", 
+      sameSite: "none",
     };
 
     return res
@@ -308,6 +305,44 @@ export const refreshAccessToken = async (req, res) => {
     return res.status(400).json({
       success: false,
       message: error?.message || "invalid refresh token",
+    });
+  }
+};
+
+export const changeCurrentPassword = async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+
+    const user = await User.findById(req.user?._id);
+
+    if(!user){
+      return res.status(404)
+      .json({
+        success : false,
+        message : "User not found"
+      })
+    }
+
+    const isPasswordCorrect = await user.isPasswordCorrect(currentPassword);
+
+    if (!isPasswordCorrect) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid password",
+      });
+    }
+
+    user.password = newPassword;
+
+    await user.save({ validateBeforeSave: false });
+
+    return res
+      .status(200)
+      .json(new ApiResponse(200, {}, "Password change successfully"));
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message || "something went wrong",
     });
   }
 };
