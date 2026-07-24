@@ -221,7 +221,7 @@ export const getAllUsers = async (req, res) => {
     if (user.role !== "admin") {
       return res.status(404).json({
         success: false,
-        message: "user not found",
+        message: "This feature can only use admin ",
       });
     }
     const allUsers = await User.find({});
