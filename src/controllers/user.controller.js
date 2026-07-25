@@ -181,12 +181,8 @@ export const updateUser = async (req, res) => {
   const updatedUser = await User.findByIdAndUpdate(
     user._id,
     {
-      $set: {
-        role: role || user.role,
-      },
-      $addToSet: {
-        skills: { $each: skills },
-      },
+      role: role || user.role,
+      skills: skills,
     },
     {
       new: true,
