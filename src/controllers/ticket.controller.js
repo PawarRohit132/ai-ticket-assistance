@@ -38,7 +38,13 @@ export const createTicket = async (req, res) => {
         ),
       );
   } catch (error) {
-    throw new ApiError(500, {}, "interal server error while creating ticket");
+    // throw new ApiError(500, {}, "interal server error while creating ticket");
+    console.log("CREATE TICKET ERROR:", error);
+
+  return res.status(500).json({
+    success: false,
+    message: error.message,
+  });
   }
 };
 

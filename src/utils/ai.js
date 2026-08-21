@@ -28,7 +28,7 @@ Respond with ONLY this JSON structure, nothing else:
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
       const completion = await groq.chat.completions.create({
-        model: "llama-3.3-70b-versatile", // free + powerful
+        model: "openai/gpt-oss-120b",
         messages: [{ role: "user", content: prompt }],
         temperature: 0.3,
       });
