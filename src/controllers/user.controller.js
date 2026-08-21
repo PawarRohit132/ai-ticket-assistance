@@ -3,6 +3,7 @@ import { inngest } from "../inngest/client.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import jwt from "jsonwebtoken";
+import { sendOTPEmail } from "../utils/sendEmail.js";
 
 export const generateAccessAndRefreshToken = async (userId) => {
   try {
@@ -51,7 +52,15 @@ export const createUser = async (req, res) => {
       password,
       skills,
       role,
+      isEmailVerified: false,
     });
+
+    user.emailVerificationOTP = user.generateEmailOTP();
+    user.emailVerificationOTPExpiry = user.generateEmailOTPExpiry();
+
+    await user.save();
+
+    await sendOTPEmail(user.email, user.emailVerificationOTP);
 
     const createdUser = await User.findById(user._id).select(
       "-password -refreshToken",
@@ -65,7 +74,13 @@ export const createUser = async (req, res) => {
 
     return res
       .status(200)
-      .json(new ApiResponse(200, createdUser, "User registered successfully"));
+      .json(
+        new ApiResponse(
+          200,
+          createdUser,
+          "OTP sent to your email. Please verify your email.",
+        ),
+      );
   } catch (error) {
     return res.status(500).json({
       success: false,
@@ -311,12 +326,11 @@ export const changeCurrentPassword = async (req, res) => {
 
     const user = await User.findById(req.user?._id);
 
-    if(!user){
-      return res.status(404)
-      .json({
-        success : false,
-        message : "User not found"
-      })
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
     }
 
     const isPasswordCorrect = await user.isPasswordCorrect(currentPassword);
@@ -341,4 +355,98 @@ export const changeCurrentPassword = async (req, res) => {
       message: error.message || "something went wrong",
     });
   }
+};
+
+export const deleteUser = async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    if (!id) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    if (req.user?.role !== "admin") {
+      return res.status(403).json({
+        success: false,
+        message: "Forbidden",
+      });
+    }
+
+    if (req.user?._id.toString() === id) {
+      return res.status(400).json({
+        success: false,
+        message: "You can not delete your own account",
+      });
+    }
+
+    const user = await User.findByIdAndDelete(id);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    return res
+      .status(200)
+      .json(new ApiResponse(200, {}, "User deleted successfully"));
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message || "something went wrong",
+    });
+  }
+};
+
+export const verifyEmail = async (req, res) => {
+  const { userId, otp } = req.body;
+
+  const user = await User.findById(userId);
+
+  if (!user) {
+    return res.status(404).json({
+      success: false,
+      message: "User not found",
+    });
+  }
+
+  if (user.isEmailVerified) {
+    return res.status(400).json({
+      success: false,
+      message: "Email already verified",
+    });
+  }
+
+  if (!user.emailVerificationOTP || user.emailVerificationOTP !== otp) {
+
+      return res.status(400).json({
+      success: false,
+      message: "Invalid OTP",
+    });
+  }
+
+  if (user.emailVerificationOTPExpiry < new Date()) {
+    
+    await User.findByIdAndDelete(userId)
+    
+    return res.status(400).json({
+      success: false,
+      message: "OTP expired",
+    });
+  }
+
+  user.isEmailVerified = true;
+  user.emailVerificationOTP = undefined;
+  user.emailVerificationOTPExpiry = undefined;
+
+  await user.save();
+
+  return res.status(200).json({
+    success: true,
+    message: "Email verified successfully",
+  });
 };

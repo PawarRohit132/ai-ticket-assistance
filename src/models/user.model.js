@@ -1,7 +1,6 @@
 import mongoose from "mongoose";
 import bcrypt from "bcrypt";
-import jwt from "jsonwebtoken"
-
+import jwt from "jsonwebtoken";
 
 const userSchema = new mongoose.Schema({
   email: {
@@ -18,9 +17,19 @@ const userSchema = new mongoose.Schema({
     enum: ["moderator", "user", "admin"],
   },
   skills: [String],
-  
-  refreshToken : {
-    type : String
+
+  refreshToken: {
+    type: String,
+  },
+  isEmailVerified: {
+    type: Boolean,
+    default: false,
+  },
+  emailVerificationOTP: {
+    type: String,
+  },
+  emailVerificationOTPExpiry: {
+    type: Date,
   },
 
   createdAt: { type: Date, default: Date.now },
@@ -30,41 +39,47 @@ userSchema.pre("save", async function (next) {
   if (this.isModified("password")) {
     this.password = await bcrypt.hash(this.password, 10);
     next();
-  }
-  else{
+  } else {
     return next();
   }
 });
 
-userSchema.methods.isPasswordCorrect = async function(password){
-    return await bcrypt.compare(password, this.password)
-}
+userSchema.methods.isPasswordCorrect = async function (password) {
+  return await bcrypt.compare(password, this.password);
+};
 
-userSchema.methods.generateAccessToken = function(){
-    return jwt.sign(
-      {
-        _id : this._id,
-        role : this.email,
-
-      },
-      process.env.ACCESS_TOKEN_SECRET,
-      {
-        expiresIn : process.env.ACCESS_TOKEN_EXPIRY
-      }
-    )
-}
-
-userSchema.methods.generateRefreshToken = function(){
+userSchema.methods.generateAccessToken = function () {
   return jwt.sign(
     {
-      _id : this._id,
-      role : this.email
+      _id: this._id,
+      role: this.email,
+    },
+    process.env.ACCESS_TOKEN_SECRET,
+    {
+      expiresIn: process.env.ACCESS_TOKEN_EXPIRY,
+    },
+  );
+};
+
+userSchema.methods.generateRefreshToken = function () {
+  return jwt.sign(
+    {
+      _id: this._id,
+      role: this.email,
     },
     process.env.REFRESH_TOKEN_SECRET,
     {
-      expiresIn : process.env.REFRESH_TOKEN_EXPIRY
-    }
-  )
-}
+      expiresIn: process.env.REFRESH_TOKEN_EXPIRY,
+    },
+  );
+};
+
+userSchema.methods.generateEmailOTP = function () {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+};
+
+userSchema.methods.generateEmailOTPExpiry = function () {
+  return new Date(Date.now() + 5 * 60 * 1000);
+};
 
 export const User = mongoose.model("User", userSchema);
