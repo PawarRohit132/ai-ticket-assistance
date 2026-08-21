@@ -84,7 +84,7 @@ export const createUser = async (req, res) => {
   } catch (error) {
     return res.status(500).json({
       success: false,
-      message: error.message || "something went wrong",
+      message: "something went wrong",
     });
   }
 };
