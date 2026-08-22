@@ -4,8 +4,8 @@ import {createTicket, getTickets, getTicket, ticketSolved, searchTicket} from ".
 
 const router = express.Router()
 
-router.post("/ticketCreated", verifyJWT, createTicket)
 router.get("/", verifyJWT, getTickets)
+router.post("/ticketCreated", verifyJWT, createTicket)
 router.get("/ticketSearch", verifyJWT, searchTicket);
 router.get("/:id", verifyJWT, getTicket)
 router.put("/ticketSolved/:id", verifyJWT, ticketSolved)

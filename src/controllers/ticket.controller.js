@@ -109,7 +109,6 @@ export const getTicket = async (req, res) => {
 export const ticketSolved = async (req, res) => {
   try {
     const user = req.user;
-    console.log(user);
 
     if (!user) {
       return res.status(401).json({
@@ -118,7 +117,6 @@ export const ticketSolved = async (req, res) => {
       });
     }
     const ticket = await Ticket.findById(req.params.id);
-    console.log(ticket);
 
     if (!ticket) {
       return res.status(404).json({
@@ -142,37 +140,6 @@ export const ticketSolved = async (req, res) => {
   }
 };
 
-// export const getTicketsByEmail = async (req, res) => {
-//   try {
-//     const { email } = req.query;
-
-//     if (!email) {
-//       return res.status(400).json({
-//         success: false,
-//         message: "Email is required",
-//       });
-//     }
-
-//     const user = await User.findOne({ email });
-//     if (user.role !== "admin") {
-//       return res.status(404).json({
-//         success: false,
-//         message: "forbiaden ",
-//       });
-//     }
-
-//     const tickets = await Ticket.find({
-//       createdBy: user._id,
-//     });
-
-//     return res
-//       .status(200)
-//       .json(new ApiResponse(200, tickets, "All Tickets Fetched"));
-//   } catch (error) {
-//     throw new ApiError(500, "interal server error while creating ticket");
-//   }
-// };
-
 export const searchTicket = async (req, res) => {
   try {
     const { search } = req.query;
@@ -184,24 +151,30 @@ export const searchTicket = async (req, res) => {
         $or: [
           { title: { $regex: search, $options: "i" } },
           { description: { $regex: search, $options: "i" } },
+          { status: { $regex: search, $options: "i" } },
+          { priority: { $regex: search, $options: "i" } },
         ],
       });
-    }else if(user.role === "moderator"){
+    } else if (user.role === "moderator") {
       tickets = await Ticket.find({
-        assignedTo : user._id,
-        $or : [
-          {title : {$regex : search, $options : "i"}},
-          {description : {$regex : search, $options : "i"}}
-        ]
-      })
-    }else{
+        assignedTo: user._id,
+        $or: [
+          { title: { $regex: search, $options: "i" } },
+          { description: { $regex: search, $options: "i" } },
+          { status: { $regex: search, $options: "i" } },
+          { priority: { $regex: search, $options: "i" } },
+        ],
+      });
+    } else {
       tickets = await Ticket.find({
-        createdBy : user._id,
-        $or : [
-          {title : {$regex : search, $options : "i"}},
-          {description : {$regex : search, $options : "i"}}
-        ]
-      })
+        createdBy: user._id,
+        $or: [
+          { title: { $regex: search, $options: "i" } },
+          { description: { $regex: search, $options: "i" } },
+          { status: { $regex: search, $options: "i" } },
+          { priority: { $regex: search, $options: "i" } },
+        ],
+      });
     }
 
     if (!tickets) {
