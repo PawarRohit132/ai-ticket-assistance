@@ -41,10 +41,10 @@ export const createTicket = async (req, res) => {
     // throw new ApiError(500, {}, "interal server error while creating ticket");
     console.log("CREATE TICKET ERROR:", error);
 
-  return res.status(500).json({
-    success: false,
-    message: error.message,
-  });
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
   }
 };
 
@@ -142,35 +142,80 @@ export const ticketSolved = async (req, res) => {
   }
 };
 
-export const getTicketsByEmail = async (req, res) => {
-  try {
-    const { email } = req.query;
+// export const getTicketsByEmail = async (req, res) => {
+//   try {
+//     const { email } = req.query;
 
-    if (!email) {
+//     if (!email) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "Email is required",
+//       });
+//     }
+
+//     const user = await User.findOne({ email });
+//     if (user.role !== "admin") {
+//       return res.status(404).json({
+//         success: false,
+//         message: "forbiaden ",
+//       });
+//     }
+
+//     const tickets = await Ticket.find({
+//       createdBy: user._id,
+//     });
+
+//     return res
+//       .status(200)
+//       .json(new ApiResponse(200, tickets, "All Tickets Fetched"));
+//   } catch (error) {
+//     throw new ApiError(500, "interal server error while creating ticket");
+//   }
+// };
+
+export const searchTicket = async (req, res) => {
+  try {
+    const { search } = req.query;
+    const user = req.user;
+    let tickets = [];
+
+    if (user.role === "admin") {
+      tickets = await Ticket.find({
+        $or: [
+          { title: { $regex: search, $options: "i" } },
+          { description: { $regex: search, $options: "i" } },
+        ],
+      });
+    }else if(user.role === "moderator"){
+      tickets = await Ticket.find({
+        assignedTo : user._id,
+        $or : [
+          {title : {$regex : search, $options : "i"}},
+          {description : {$regex : search, $options : "i"}}
+        ]
+      })
+    }else{
+      tickets = await Ticket.find({
+        createdBy : user._id,
+        $or : [
+          {title : {$regex : search, $options : "i"}},
+          {description : {$regex : search, $options : "i"}}
+        ]
+      })
+    }
+
+    if (!tickets) {
       return res.status(400).json({
         success: false,
-        message: "Email is required",
+        message: "Ticket not found",
       });
     }
 
-    const user = await User.findOne({ email });
-    if (user.role !== "admin") {
-      return res.status(404).json({
-        success: false,
-        message: "forbiaden ",
-      });
-    }
-
-
-
-    const tickets = await Ticket.find({
-      createdBy: user._id,
-    });
-
-    return res
-      .status(200)
-      .json(new ApiResponse(200, tickets, "All Tickets Fetched"));
+    return res.status(200).json(new ApiResponse(200, tickets, ""));
   } catch (error) {
-    throw new ApiError(500, "interal server error while creating ticket");
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
   }
 };
