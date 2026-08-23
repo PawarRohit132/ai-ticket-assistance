@@ -3,7 +3,7 @@ import { Ticket } from "../../models/ticket.model.js";
 import { NonRetriableError } from "inngest";
 import { inngest } from "../client.js";
 import analyzeTicket from "../../utils/ai.js";
-import { ApiResponse } from "../../utils/ApiResponse.js";
+
 
 export const onTicketCreated = inngest.createFunction(
   {
