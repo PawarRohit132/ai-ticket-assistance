@@ -45,8 +45,7 @@ const brevo = new BrevoClient({
   apiKey: process.env.BREVO_API_KEY,
 });
 
-console.log("API key exists:", !!process.env.BREVO_API_KEY);
-console.log("API key length:", process.env.BREVO_API_KEY?.length);
+
 
 export const sendOTPEmail = async (email, otp) => {
   try {

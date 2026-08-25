@@ -1,6 +1,4 @@
 import { User } from "../models/user.model.js";
-import { inngest } from "../inngest/client.js";
-import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import jwt from "jsonwebtoken";
 import { sendOTPEmail } from "../utils/sendEmail.js";
@@ -403,50 +401,219 @@ export const deleteUser = async (req, res) => {
 };
 
 export const verifyEmail = async (req, res) => {
-  const { userId, otp } = req.body;
+  try {
+    const { userId, otp } = req.body;
 
-  const user = await User.findById(userId);
+    const user = await User.findById(userId);
 
-  if (!user) {
-    return res.status(404).json({
-      success: false,
-      message: "User not found",
-    });
-  }
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
 
-  if (user.isEmailVerified) {
-    return res.status(400).json({
-      success: false,
-      message: "Email already verified",
-    });
-  }
+    if (user.isEmailVerified) {
+      return res.status(400).json({
+        success: false,
+        message: "Email already verified",
+      });
+    }
 
-  if (!user.emailVerificationOTP || user.emailVerificationOTP !== otp) {
+    if (!user.emailVerificationOTP || user.emailVerificationOTP !== otp) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid OTP",
+      });
+    }
+
+    if (user.emailVerificationOTPExpiry < new Date()) {
+      await User.findByIdAndDelete(userId);
 
       return res.status(400).json({
+        success: false,
+        message: "OTP expired",
+      });
+    }
+
+    user.isEmailVerified = true;
+    user.emailVerificationOTP = undefined;
+    user.emailVerificationOTPExpiry = undefined;
+
+    await user.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Email verified successfully",
+    });
+  } catch (error) {
+    return res.status(500).json({
       success: false,
-      message: "Invalid OTP",
+      message: error.message || "something went wrong",
     });
   }
+};
 
-  if (user.emailVerificationOTPExpiry < new Date()) {
-    
-    await User.findByIdAndDelete(userId)
-    
-    return res.status(400).json({
+export const forgottenPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+    console.log(email);
+
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: "Email is required",
+      });
+    }
+
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    user.emailVerificationOTP = user.generateEmailOTP();
+    user.emailVerificationOTPExpiry = user.generateEmailOTPExpiry();
+
+    await user.save();
+
+    await sendOTPEmail(user.email, user.emailVerificationOTP);
+
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          user,
+          "OTP sent to your email. Please verify your email.",
+        ),
+      );
+  } catch (error) {
+    return res.status(500).json({
       success: false,
-      message: "OTP expired",
+      message: error.message || "something went wrong",
     });
   }
+};
 
-  user.isEmailVerified = true;
-  user.emailVerificationOTP = undefined;
-  user.emailVerificationOTPExpiry = undefined;
+export const verifyForgottenPassword = async (req, res) => {
+  try {
+    const { userId, otp } = req.body;
 
-  await user.save();
+    if (!otp) {
+      return res.status(400).json({
+        success: false,
+        message: "OTP is required",
+      });
+    }
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        message: "userId is required",
+      });
+    }
 
-  return res.status(200).json({
-    success: true,
-    message: "Email verified successfully",
-  });
+    const user = await User.findById(userId);
+
+    if (!user.emailVerificationOTP || user.emailVerificationOTP !== otp) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid OTP",
+      });
+    }
+
+    if (user.emailVerificationOTPExpiry < new Date()) {
+      return res.status(400).json({
+        success: false,
+        message: "OTP expired",
+      });
+    }
+
+    user.emailVerificationOTP = undefined;
+    user.emailVerificationOTPExpiry = undefined;
+
+    return res
+      .status(200)
+      .json(new ApiResponse(200, {}, "OTP verify successfully"));
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message || "something went wrong",
+    });
+  }
+};
+
+export const setForgottenPassword = async (req, res) => {
+  try {
+    const { userId, password } = req.body;
+
+    if (!password) {
+      return res.status(400).json({
+        success: false,
+        message: "Password is required",
+      });
+    }
+
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "user not found",
+      });
+    }
+
+    user.password = password;
+
+    await user.save();
+
+    return res
+      .status(200)
+      .json(new ApiResponse(200, user, "Password change successfully"));
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message || "something went wrong",
+    });
+  }
+};
+
+export const resendOtp = async (req, res) => {
+  try {
+    const { userId } = req.body;
+
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        message: "userId is required",
+      });
+    }
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    user.emailVerificationOTP = user.generateEmailOTP();
+    user.emailVerificationOTPExpiry = user.generateEmailOTPExpiry();
+
+    await user.save();
+
+    await sendOTPEmail(user.email, user.emailVerificationOTP);
+
+    return res
+      .status(200)
+      .json(new ApiResponse(200, user, "OTP send successfully"));
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message || "something went wrong",
+    });
+  }
 };
