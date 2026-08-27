@@ -2,6 +2,8 @@ import { User } from "../models/user.model.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import jwt from "jsonwebtoken";
 import { sendOTPEmail } from "../utils/sendEmail.js";
+import { sendWelcomeEmail } from "../utils/sendEmail.js";
+import { inngest } from "../inngest/client.js";
 
 export const generateAccessAndRefreshToken = async (userId) => {
   try {
@@ -69,6 +71,13 @@ export const createUser = async (req, res) => {
         message: "Something went wrong while creating User",
       });
     }
+    
+    await inngest.send({
+      name : "user/created",
+      data : {
+        email : user.email.toString(),
+      }
+    })
 
     return res
       .status(200)
@@ -113,6 +122,13 @@ export const loginUser = async (req, res) => {
       success: false,
       message: "password incorrect",
     });
+  }
+  
+  if(!user.isEmailVerified){
+    return res.status(404).json({
+      success : false,
+      message : "User not found"
+    })
   }
 
   const { accessToken, refreshToken } = await generateAccessAndRefreshToken(
@@ -441,6 +457,8 @@ export const verifyEmail = async (req, res) => {
     user.emailVerificationOTPExpiry = undefined;
 
     await user.save();
+
+  
 
     return res.status(200).json({
       success: true,

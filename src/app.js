@@ -4,6 +4,7 @@ import {serve} from "inngest/express"
 import {inngest}  from "./inngest/client.js"
 import {onTicketCreated} from "./inngest/functions/on-ticket-created.js"
 import {onTicketSolved} from "./inngest/functions/on-ticket-solved.js"
+import {onUserCreated} from "./inngest/functions/on-user-created.js"
 import cookieParser from "cookie-parser";
 
 
@@ -27,7 +28,7 @@ app.use("/api/v1/users", userRouter )
 app.use("/api/v1/tickets", ticketRouter)
 app.use("/api/v1/inngest", serve({
     client : inngest,
-    functions : [onTicketCreated, onTicketSolved]
+    functions : [onTicketCreated, onTicketSolved, onUserCreated]
 }))
 
 

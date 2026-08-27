@@ -3,15 +3,15 @@ import { Ticket } from "../../models/ticket.model.js";
 import { NonRetriableError } from "inngest";
 import { inngest } from "../client.js";
 import analyzeTicket from "../../utils/ai.js";
-
+import { sendAssignEmail } from "../../utils/sendEmail.js";
 
 export const onTicketCreated = inngest.createFunction(
   {
     id: "on-ticket-created",
     retries: 2,
-    rateLimit : {
-      limit : 5,
-      period : "1m"
+    rateLimit: {
+      limit: 5,
+      period: "1m",
     },
 
     triggers: [
@@ -109,7 +109,10 @@ export const onTicketCreated = inngest.createFunction(
         },
       );
 
-     
+      await step.run("send-email-notification", async () => {
+        const finalTicket = await Ticket.findById(ticket._id);        
+        await sendAssignEmail(moderator.email, finalTicket.title);
+      });
 
       return { success: true };
     } catch (err) {
